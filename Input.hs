@@ -5,9 +5,12 @@ import Data.Default (def)
 import AutoBench.QuickCheck
 import AutoBench.Types
 
+import Test.QuickCheck (Arbitrary(..), sized)
+import Control.DeepSeq (NFData(..))
 
-uE :: Int -> Int
-uE x = (filterPrime [2..]) !! x where
+
+uE :: PositiveInt -> Int
+uE (PositiveInt x) = (filterPrime [2..]) !! x where
   filterPrime (p:xs) =
     p : filterPrime [x | x <- xs, (mod x p) /= 0]
 
@@ -16,8 +19,8 @@ minus xs@(x:txs) ys@(y:tys)
   | x > y = minus xs txs
   | otherwise = minus txs tys
 
-eS :: Int -> Int
-eS x = (eulerSieve [2..]) !! x where
+eS :: PositiveInt -> Int
+eS (PositiveInt x) = (eulerSieve [2..]) !! x where
   eulerSieve cs@(p:tcs) = p:eulerSieve (minus tcs (map (p*) cs))
 
 
@@ -26,8 +29,8 @@ union xs@(x:txs) ys@(y:tys)
   | x < y = x:union txs ys
   | x > y = y:union xs tys
 
-fES :: Int -> Int
-fES x = primes !! x where
+fES :: PositiveInt -> Int
+fES (PositiveInt x) = primes !! x where
   primes = 2:([3..] `minus` composites)
   composites = foldr unionP [] [multiples p | p <- primes]
   multiples n = map (n*) [n..]
@@ -42,8 +45,8 @@ dUnion xs@(x:txs) ys@(y:tys)
   | otherwise = y:dUnion xs tys
 dUnion xs [] = xs
 
-eSH :: Int -> Int
-eSH x = primes !! x where
+eSH :: PositiveInt -> Int
+eSH (PositiveInt x) = primes !! x where
   composites (x:xs) = cmpsts where
     cmpsts = (x*x):map (x*) (dUnion xs cmpsts) `dUnion` (composites xs)
   primes = 2:([3..] `sMinus` composites primes)
@@ -64,24 +67,24 @@ circ w = w ++ circ w
 spin (w:ws) n = n:spin ws (n+w)
 
 
-eSW:: Int -> Int
-eSW x = primes !! x where
+eSW:: PositiveInt -> Int
+eSW (PositiveInt x) = primes !! x where
   composites (p:ps) w =
     map (p*) (spin (circ w) p) `dUnionP` composites ps w' where
     w' = nextWheel1 w p
     dUnionP (x:xs) ys = x : dUnion xs ys
   primes = 2:([3..] `sMinus` (composites primes [1]))
 
-eSI :: Int -> Int
-eSI x = primes !! x where
+eSI :: PositiveInt -> Int
+eSI (PositiveInt x) = primes !! x where
   primes = 2:([3..] `sMinus` (composites primes [2..]))
   composites (p:ps) ss@(s:tss) = es `dUnionP` composites ps ss' where
     es = map (p*) ss
     ss' = tss `sMinus` es
     dUnionP (x:xs) ys = x : dUnion xs ys
 
-eSPQ :: Int -> Int
-eSPQ x = (sieve [2..]) !! x where
+eSPQ :: PositiveInt -> Int
+eSPQ (PositiveInt x) = (sieve [2..]) !! x where
   sieve (c:cs) = c:sieve' cs ss (insert (c*c) (tail es) empty) where 
       es = map (c*) (c:cs)
       ss = cs `sMinus` es
@@ -98,8 +101,8 @@ eSPQ x = (sieve [2..]) !! x where
 w4 = nextWheel1 [4,2,4,2,4,6,2,6] 7
 s4 = spin (circ w4) 11
 
-eSWPQ :: Int -> Int
-eSWPQ x = primes !! x where
+eSWPQ :: PositiveInt -> Int
+eSWPQ (PositiveInt x) = primes !! x where
   sieve (c:cs) w = c:sieve' cs (nextWheel1 w c)
     (insert (c*c) (circ (map (c*) w)) empty) where 
       sieve' cs@(c:tcs) w tbl
@@ -112,32 +115,18 @@ eSWPQ x = primes !! x where
   primes = 2:3:5:7:sieve s4 w4
 
 
-tDat :: UnaryTestData Int
-tDat  = 
-  [ (100, return 100)
-  , (300, return 300)
-  , (600, return 600)
-  , (900, return 900)
-  , (1200, return 1200)
-  , (1500, return 1500)
-  , (1800, return 1800)
-  , (2100, return 2100)
-  , (2400, return 2400)
-  , (2700, return 2700)
-  , (3000, return 3000)
-  , (3300, return 3300)
-  , (3600, return 3600)
-  , (3900, return 3900)
-  , (4200, return 4200)
-  , (4500, return 4500)
-  , (4800, return 4800)
-  , (5100, return 5100)
-  , (5400, return 5400)
-  , (5700, return 5700)
-  ]
+newtype PositiveInt = PositiveInt Int deriving Show
 
-ts :: TestSuite 
+instance Arbitrary PositiveInt where
+  arbitrary = sized(\n -> 
+    if n < 0 
+    then error $ "valore negativo" ++ show n
+    else return $ PositiveInt n)
+
+instance NFData PositiveInt where 
+  rnf (PositiveInt n) = rnf n
+
 ts  = def {
   _progs = ["uE", "eS", "fES", "eSH", "eSW", "eSI", "eSPQ", "eSWPQ"],
-  _dataOpts = Manual "tDat"
+  _dataOpts = Gen 0 500 10000
 }
