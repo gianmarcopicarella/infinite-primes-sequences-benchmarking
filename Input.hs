@@ -251,7 +251,7 @@ ts_FaithVsUnfaithEratosthene = def {
 }
 
 ts_EulerPriorityQueue :: TestSuite
-ts_PriorityQueue = def {
+ts_EulerPriorityQueue = def {
   _dataOpts = Gen 0 500 10000,
   _progs = ["eSPQ", "eSWPQ", "eSPQ4", "eSWPQ4"],
   _analOpts = def {
