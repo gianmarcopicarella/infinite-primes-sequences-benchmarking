@@ -266,8 +266,8 @@ ts_EulerSieves = def {
   _dataOpts = Gen 0 500 10000,
   _progs = ["eSH", "eSW", "eSI", "eSH4", "eSW4", "eSI4"],
   _analOpts = def {
-    _graphFP   = Just "./Benchmarks/AutoBenched_PQ.png",
-    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_PQ.txt",                         
-    _coordsFP  = Just "./Benchmarks/AutoBenched_PQ.csv"
+    _graphFP   = Just "./Benchmarks/AutoBenched_ES.png",
+    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_ES.txt",                         
+    _coordsFP  = Just "./Benchmarks/AutoBenched_ES.csv"
   }
 }
