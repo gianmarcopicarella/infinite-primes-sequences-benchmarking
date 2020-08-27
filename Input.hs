@@ -213,6 +213,11 @@ eSWPQ4 (PositiveInt x) = primes !! x where
     w4 = nextWheel1 [4,2,4,2,4,6,2,6] 7
     s4 = spin (circ w4) 11
 
+-- Hybrid approach (eSI4 merged with eSWPQ4)
+hybridNthPrime :: PositiveInt -> Int
+hybridNthPrime (PositiveInt x) 
+  | x < 3565155 = eSI4 (PositiveInt x)
+  | otherwise = eSWPQ4 (PositiveInt x)
 
 
 newtype PositiveInt = PositiveInt Int deriving Show
@@ -231,7 +236,7 @@ instance NFData PositiveInt where
 ts_All :: TestSuite
 ts_All = def {
   _dataOpts = Gen 0 500 10000,
-  _progs = ["uE", "eS", "fE", "eSH", "eSW", "eSI", "eSH4", "eSW4", "eSI4", "eSPQ", "eSWPQ", "eSPQ4", "eSWPQ4"],
+  _progs = ["uE", "fE", "eS", "eSH", "eSW", "eSI", "eSH4", "eSW4", "eSI4", "eSPQ", "eSWPQ", "eSPQ4", "eSWPQ4"],
   _analOpts = def {
     _graphFP   = Just "./Benchmarks/AutoBenched_ALL.png",
     _reportFP  = Just "./Benchmarks/AutoBenchPerformance_ALL.txt",                         
@@ -239,9 +244,65 @@ ts_All = def {
   }
 }
 
+ts_NoEs :: TestSuite
+ts_NoEs = def {
+  _dataOpts = Gen 0 1250 25000,
+  _progs = ["uE", "fE", "eSH", "eSW", "eSI", "eSH4", "eSW4", "eSI4", "eSPQ", "eSWPQ", "eSPQ4", "eSWPQ4"],
+  _analOpts = def {
+    _graphFP   = Just "./Benchmarks/AutoBenched_NoEs.png",
+    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_NoEs.txt",                         
+    _coordsFP  = Just "./Benchmarks/AutoBenched_NoEs.csv"
+  }
+}
+
+ts_NoEsUe :: TestSuite
+ts_NoEsUe = def {
+  _dataOpts = Gen 0 10000 200000,
+  _progs = ["fE", "eSH", "eSW", "eSI", "eSH4", "eSW4", "eSI4", "eSPQ", "eSWPQ", "eSPQ4", "eSWPQ4"],
+  _analOpts = def {
+    _graphFP   = Just "./Benchmarks/AutoBenched_NoEsUe.png",
+    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_NoEsUe.txt",                         
+    _coordsFP  = Just "./Benchmarks/AutoBenched_NoEsUe.csv"
+  }
+}
+
+ts_ESI4AndQueues :: TestSuite
+ts_ESI4AndQueues = def {
+  _dataOpts = Gen 0 52428 1048576,
+  _progs = ["eSI4", "eSPQ", "eSWPQ", "eSPQ4", "eSWPQ4"],
+  _analOpts = def {
+    _graphFP   = Just "./Benchmarks/AutoBenched_ESI4AndQueues.png",
+    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_ESI4AndQueues.txt",                         
+    _coordsFP  = Just "./Benchmarks/AutoBenched_ESI4AndQueues.csv"
+  }
+}
+
+ts_final :: TestSuite
+ts_final = def {
+  _dataOpts = Gen 0 209715 4194304,
+  _progs = ["eSI4", "eSPQ4", "eSWPQ4"],
+  _analOpts = def {
+    _graphFP   = Just "./Benchmarks/AutoBenched_final.png",
+    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_final.txt",                         
+    _coordsFP  = Just "./Benchmarks/AutoBenched_final.csv"
+  }
+}
+
+ts_finalHeavy :: TestSuite
+ts_finalHeavy = def {
+  _dataOpts = Gen 0 350000 7000000,
+  _progs = ["eSI4", "eSPQ4", "eSWPQ4"],
+  _analOpts = def {
+    _graphFP   = Just "./Benchmarks/AutoBenched_finalHeavy.png",
+    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_finalHeavy.txt",                         
+    _coordsFP  = Just "./Benchmarks/AutoBenched_finalHeavy.csv"
+  }
+}
+
+
 ts_FaithVsUnfaithEratosthene :: TestSuite
 ts_FaithVsUnfaithEratosthene = def {
-  _dataOpts = Gen 0 500 10000,
+  _dataOpts = Gen 0 1250 25000,
   _progs = ["uE", "fE"],
   _analOpts = def {
     _graphFP   = Just "./Benchmarks/AutoBenched_FVSUE.png",
@@ -252,7 +313,7 @@ ts_FaithVsUnfaithEratosthene = def {
 
 ts_EulerPriorityQueue :: TestSuite
 ts_EulerPriorityQueue = def {
-  _dataOpts = Gen 0 500 10000,
+  _dataOpts = Gen 0 10000 200000,
   _progs = ["eSPQ", "eSWPQ", "eSPQ4", "eSWPQ4"],
   _analOpts = def {
     _graphFP   = Just "./Benchmarks/AutoBenched_EPQ.png",
@@ -263,7 +324,7 @@ ts_EulerPriorityQueue = def {
 
 ts_EulerSieves :: TestSuite
 ts_EulerSieves = def {
-  _dataOpts = Gen 0 500 10000,
+  _dataOpts = Gen 0 10000 200000,
   _progs = ["eSH", "eSW", "eSI", "eSH4", "eSW4", "eSI4"],
   _analOpts = def {
     _graphFP   = Just "./Benchmarks/AutoBenched_ES.png",
@@ -271,3 +332,6 @@ ts_EulerSieves = def {
     _coordsFP  = Just "./Benchmarks/AutoBenched_ES.csv"
   }
 }
+
+
+
