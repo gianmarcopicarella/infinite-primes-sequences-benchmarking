@@ -26,11 +26,22 @@ circ w = w ++ circ w
 spin (w:ws) n = n:spin ws (n+w)
 
 
+genWheel :: [Int] -> [Int]
+genWheel [2] = [2]
+genWheel xs
+  | length cpl == 0 = []
+  | otherwise = go (head cpl) (tail cpl) where
+    c = foldr (*) 1 xs
+    cpl = [x | x <- [2..(c+1)], cp x]
+    cp x = foldr (&&) True [mod x p /= 0 | p <- xs]
+    go a (b:t) = (b - a) : go b t
+    go a [] = [(head cpl + c) - a]
+
 
 -- minus and union procedures
 minus xs@(x:txs) ys@(y:tys)
   | x < y = x : minus txs ys
-  | x > y = minus xs txs
+  | x > y = minus xs tys
   | otherwise = minus txs tys
 
 union xs@(x:txs) ys@(y:tys)
@@ -47,26 +58,29 @@ dUnion xs@(x:txs) ys@(y:tys)
   | otherwise = y:dUnion xs tys
 dUnion xs [] = xs
 
+-- Trial division
+trialDiv :: PositiveInt -> Int
+trialDiv (PositiveInt x) = primes !! x where
+  primes = 2 : [i | i <- [3..],  
+    and [rem i p > 0 | p <- takeWhile (\p -> p^2 <= i) primes]]
 
 
--- Unfaithful Eratosthene
-uE :: PositiveInt -> Int
-uE (PositiveInt x) = (filterPrime [2..]) !! x where
+-- Turner
+turner :: PositiveInt -> Int
+turner (PositiveInt x) = (filterPrime [2..]) !! x where
   filterPrime (p:xs) =
     p : filterPrime [x | x <- xs, (mod x p) /= 0]
 
-
-
--- Euler's sieve
-eS :: PositiveInt -> Int
-eS (PositiveInt x) = (eulerSieve [2..]) !! x where
+-- Euler's sieve naive
+eulerNaive :: PositiveInt -> Int
+eulerNaive (PositiveInt x) = (eulerSieve [2..]) !! x where
   eulerSieve cs@(p:tcs) = p:eulerSieve (minus tcs (map (p*) cs))
 
+---------------------------------------------------------------------------------------------
 
-
--- Faithful Eratosthene
-fE :: PositiveInt -> Int
-fE (PositiveInt x) = primes !! x where
+-- Bird-Eratostene
+birdEra :: PositiveInt -> Int
+birdEra (PositiveInt x) = primes !! x where
   primes = 2:([3..] `minus` composites)
   composites = foldr unionP [] [multiples p | p <- primes]
   multiples n = map (n*) [n..]
@@ -74,99 +88,31 @@ fE (PositiveInt x) = primes !! x where
 
 
 
--- Euler's sieve from Hamming sequence
-eSH :: PositiveInt -> Int
-eSH (PositiveInt x) = primes !! x where
+-- Bird-Salvo
+eulerHamming :: PositiveInt -> Int
+eulerHamming (PositiveInt x) = primes !! x where
   composites (x:xs) = cmpsts where
     cmpsts = (x*x):map (x*) (dUnion xs cmpsts) `dUnion` (composites xs)
   primes = 2:([3..] `sMinus` composites primes)
 
 
-
--- Euler's sieve from Hamming sequence equipped with a 4 primes wheel
-eSH4 :: PositiveInt -> Int
-eSH4 (PositiveInt x) = primes !! x where
-  composites (x:xs) = cmpsts where
-    cmpsts = (x*x):map (x*) (dUnion xs cmpsts) `dUnion` (composites xs)
-  primes = 2:3:5:7:11:t4 `sMinus` composites (drop 4 primes) where
-    w4 = nextWheel1 [4,2,4,2,4,6,2,6] 7
-    s4 = spin (circ w4) 11
-    t4 = tail s4
-
-
-
--- Euler's sieve equipped with wheels 
-eSW:: PositiveInt -> Int
-eSW (PositiveInt x) = primes !! x where
-  composites (p:ps) w =
-    map (p*) (spin (circ w) p) `dUnionP` composites ps w' where
-    w' = nextWheel1 w p
-    dUnionP (x:xs) ys = x : dUnion xs ys
-  primes = 2:([3..] `sMinus` (composites primes w0))
-
-
-
--- Euler's sieve equipped with a 4 primes wheel 
-eSW4:: PositiveInt -> Int
-eSW4 (PositiveInt x) = primes !! x where
-  composites (p:ps) w =
-    map (p*) (spin (circ w) p) `dUnionP` composites ps w' where
-    w' = nextWheel1 w p
-    dUnionP (x:xs) ys = x : dUnion xs ys
-  primes = 2:3:5:7:11:t4 `sMinus` composites (drop 4 primes) w4 where
-    w4 = nextWheel1 [4,2,4,2,4,6,2,6] 7
-    s4 = spin (circ w4) 11
-    t4 = tail s4
-
-
-
 -- Euler's sieve inductive sets
-eSI :: PositiveInt -> Int
-eSI (PositiveInt x) = primes !! x where
+birdSalvo :: PositiveInt -> Int
+birdSalvo (PositiveInt x) = primes !! x where
   primes = 2:([3..] `sMinus` (composites primes [2..]))
   composites (p:ps) ss@(s:tss) = es `dUnionP` composites ps ss' where
     es = map (p*) ss
     ss' = tss `sMinus` es
     dUnionP (x:xs) ys = x : dUnion xs ys
 
+------------------------------------------------------------------------------------------------
 
-
--- Euler's sieve inductive sets equipped with a 4 primes wheel
-eSI4 :: PositiveInt -> Int
-eSI4 (PositiveInt x) = primes !! x where
-  primes = 2:3:5:7:11:t4 `sMinus` (composites (drop 4 primes) s4) where
-    w4 = nextWheel1 [4,2,4,2,4,6,2,6] 7
-    s4 = spin (circ w4) 11
-    t4 = tail s4
-  composites (p:ps) ss@(s:tss) = es `dUnionP` composites ps ss' where
-    es = map (p*) ss
-    ss' = tss `sMinus` es
-    dUnionP (x:xs) ys = x : dUnion xs ys
 
 
 
 -- Euler's sieve with priority queue (avoiding stream fusion)
-eSPQ :: PositiveInt -> Int
-eSPQ (PositiveInt x) = (sieve [2..]) !! x where
-  sieve (c:cs) = c:sieve' cs ss (insert (c*c) (tail es) empty) where 
-      es = map (c*) (c:cs)
-      ss = cs `sMinus` es
-      sieve' cs@(c:tcs) ss tbl
-        | c < n = c : sieve' tcs ss' tbl'
-        | otherwise = sieve' tcs ss tbl'' where 
-          (n, m:ms) = findMin tbl
-          es = map (c*) ss
-          ss' = tail (ss `sMinus` es)
-          tbl' = insert (c*c) (tail es) tbl
-          tbl'' = insert m ms (deleteMin tbl)
-
-
-
--- Euler's sieve with priority queue (avoiding stream fusion)
-eSPQ4 :: PositiveInt -> Int
-eSPQ4 (PositiveInt x) = (2:3:5:7:(sieve s4)) !! x where
-  w4 = nextWheel1 [4,2,4,2,4,6,2,6] 7
-  s4 = spin (circ w4) 11
+oNeillPQ :: PositiveInt -> Int
+oNeillPQ (PositiveInt x) = (sieve [2..]) !! x where
   sieve (c:cs) = c:sieve' cs ss (insert (c*c) (tail es) empty) where 
       es = map (c*) (c:cs)
       ss = cs `sMinus` es
@@ -182,8 +128,8 @@ eSPQ4 (PositiveInt x) = (2:3:5:7:(sieve s4)) !! x where
 
 
 -- Euler's sieve with priority queue and wheel (avoiding stream fusion)
-eSWPQ :: PositiveInt -> Int
-eSWPQ (PositiveInt x) = primes !! x where
+oNeillWPQ :: PositiveInt -> Int
+oNeillWPQ (PositiveInt x) = primes !! x where
   sieve (c:cs) w = c:sieve' cs (nextWheel1 w c)
     (insert (c*c) (circ (map (c*) w)) empty) where 
       sieve' cs@(c:tcs) w tbl
@@ -197,9 +143,31 @@ eSWPQ (PositiveInt x) = primes !! x where
 
 
 
--- Euler's sieve with priority queue and 4 primes wheel (avoiding stream fusion)
-eSWPQ4 :: PositiveInt -> Int
-eSWPQ4 (PositiveInt x) = primes !! x where
+
+-- Euler's sieve from Hamming sequence equipped with a 4 primes wheel
+eulerHammingW4 :: PositiveInt -> Int
+eulerHammingW4 (PositiveInt x) = primes !! x where
+  composites (x:xs) = cmpsts where
+    cmpsts = (x*x):map (x*) (dUnion xs cmpsts) `dUnion` (composites xs)
+  primes = 2:3:5:7:11:t4 `sMinus` composites (drop 4 primes) where
+    w4 = nextWheel1 [4,2,4,2,4,6,2,6] 7
+    s4 = spin (circ w4) 11
+    t4 = tail s4
+
+-- Euler's sieve inductive sets equipped with a 4 primes wheel
+birdSalvoW4 :: PositiveInt -> Int
+birdSalvoW4 (PositiveInt x) = primes !! x where
+  primes = 2:3:5:7:11:t4 `sMinus` (composites (drop 4 primes) s4) where
+    w4 = nextWheel1 [4,2,4,2,4,6,2,6] 7
+    s4 = spin (circ w4) 11
+    t4 = tail s4
+  composites (p:ps) ss@(s:tss) = es `dUnionP` composites ps ss' where
+    es = map (p*) ss
+    ss' = tss `sMinus` es
+    dUnionP (x:xs) ys = x : dUnion xs ys
+
+oNeillWPQ4 :: PositiveInt -> Int
+oNeillWPQ4 (PositiveInt x) = primes !! x where
   sieve (c:cs) w = c:sieve' cs (nextWheel1 w c)
     (insert (c*c) (circ (map (c*) w)) empty) where 
       sieve' cs@(c:tcs) w tbl
@@ -213,12 +181,35 @@ eSWPQ4 (PositiveInt x) = primes !! x where
     w4 = nextWheel1 [4,2,4,2,4,6,2,6] 7
     s4 = spin (circ w4) 11
 
--- Hybrid approach (eSI4 merged with eSWPQ4)
-hybridNthPrime :: PositiveInt -> Int
-hybridNthPrime (PositiveInt x) 
-  | x < 3565155 = eSI4 (PositiveInt x)
-  | otherwise = eSWPQ4 (PositiveInt x)
+oNeillPQ4 :: PositiveInt -> Int
+oNeillPQ4 (PositiveInt x) = (2:3:5:7:(sieve s4)) !! x where
+  w4 = nextWheel1 [4,2,4,2,4,6,2,6] 7
+  s4 = spin (circ w4) 11
+  sieve (c:cs) = c:sieve' cs ss (insert (c*c) (tail es) empty) where 
+      es = map (c*) (c:cs)
+      ss = cs `sMinus` es
+      sieve' cs@(c:tcs) ss tbl
+        | c < n = c : sieve' tcs ss' tbl'
+        | otherwise = sieve' tcs ss tbl'' where 
+          (n, m:ms) = findMin tbl
+          es = map (c*) ss
+          ss' = tail (ss `sMinus` es)
+          tbl' = insert (c*c) (tail es) tbl
+          tbl'' = insert m ms (deleteMin tbl)
 
+-- Bird-Picarella w4
+birdPicarellaW4 :: PositiveInt -> Int
+birdPicarellaW4 (PositiveInt x) = primes !! x where
+  primes = 2:3:5:7:11:13:(drop 2 ss) `sMinus` comp
+  unionP (x:xs) ys = x:dUnion xs ys
+  comp = foldr unionP [] (mult (drop 5 primes) w4)
+  mult (p:xs) w = (map (p*) s) : mult xs nw where
+    s  = spin (circ w) p
+    nw = nextWheel1 w p
+  w4 = genWheel [2,3,5,7]
+  ss = spin (circ w4) 11
+  
+------------------------------------------------------------------------------------------------
 
 newtype PositiveInt = PositiveInt Int deriving Show
 
@@ -232,106 +223,69 @@ instance NFData PositiveInt where
   rnf (PositiveInt n) = rnf n
 
 
-
-ts_All :: TestSuite
-ts_All = def {
-  _dataOpts = Gen 0 500 10000,
-  _progs = ["uE", "fE", "eS", "eSH", "eSW", "eSI", "eSH4", "eSW4", "eSI4", "eSPQ", "eSWPQ", "eSPQ4", "eSWPQ4"],
+ts_AVANZATI_TRY :: TestSuite
+ts_AVANZATI_TRY = def {
+  _dataOpts = Gen 0 500000 10000000,
+  _progs = ["birdEraW4"],
   _analOpts = def {
-    _graphFP   = Just "./Benchmarks/AutoBenched_ALL.png",
-    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_ALL.txt",                         
-    _coordsFP  = Just "./Benchmarks/AutoBenched_ALL.csv"
-  }
-}
-
-ts_NoEs :: TestSuite
-ts_NoEs = def {
-  _dataOpts = Gen 0 1250 25000,
-  _progs = ["uE", "fE", "eSH", "eSW", "eSI", "eSH4", "eSW4", "eSI4", "eSPQ", "eSWPQ", "eSPQ4", "eSWPQ4"],
-  _analOpts = def {
-    _graphFP   = Just "./Benchmarks/AutoBenched_NoEs.png",
-    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_NoEs.txt",                         
-    _coordsFP  = Just "./Benchmarks/AutoBenched_NoEs.csv"
-  }
-}
-
-ts_NoEsUe :: TestSuite
-ts_NoEsUe = def {
-  _dataOpts = Gen 0 10000 200000,
-  _progs = ["fE", "eSH", "eSW", "eSI", "eSH4", "eSW4", "eSI4", "eSPQ", "eSWPQ", "eSPQ4", "eSWPQ4"],
-  _analOpts = def {
-    _graphFP   = Just "./Benchmarks/AutoBenched_NoEsUe.png",
-    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_NoEsUe.txt",                         
-    _coordsFP  = Just "./Benchmarks/AutoBenched_NoEsUe.csv"
-  }
-}
-
-ts_ESI4AndQueues :: TestSuite
-ts_ESI4AndQueues = def {
-  _dataOpts = Gen 0 52428 1048576,
-  _progs = ["eSI4", "eSPQ", "eSWPQ", "eSPQ4", "eSWPQ4"],
-  _analOpts = def {
-    _graphFP   = Just "./Benchmarks/AutoBenched_ESI4AndQueues.png",
-    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_ESI4AndQueues.txt",                         
-    _coordsFP  = Just "./Benchmarks/AutoBenched_ESI4AndQueues.csv"
-  }
-}
-
-ts_final :: TestSuite
-ts_final = def {
-  _dataOpts = Gen 0 209715 4194304,
-  _progs = ["eSI4", "eSPQ4", "eSWPQ4"],
-  _analOpts = def {
-    _graphFP   = Just "./Benchmarks/AutoBenched_final.png",
-    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_final.txt",                         
-    _coordsFP  = Just "./Benchmarks/AutoBenched_final.csv"
-  }
-}
-
-ts_finalHeavy :: TestSuite
-ts_finalHeavy = def {
-  _dataOpts = Gen 0 350000 7000000,
-  _progs = ["eSI4", "eSPQ4", "eSWPQ4"],
-  _analOpts = def {
-    _graphFP   = Just "./Benchmarks/AutoBenched_finalHeavy.png",
-    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_finalHeavy.txt",                         
-    _coordsFP  = Just "./Benchmarks/AutoBenched_finalHeavy.csv"
+    _graphFP   = Just "./Benchmarks/AutoBenched_AVANZATI_TRY.png",
+    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_AVANZATI_TRY.txt",                         
+    _coordsFP  = Just "./Benchmarks/AutoBenched_AVANZATI_TRY.csv"
   }
 }
 
 
-ts_FaithVsUnfaithEratosthene :: TestSuite
-ts_FaithVsUnfaithEratosthene = def {
-  _dataOpts = Gen 0 1250 25000,
-  _progs = ["uE", "fE"],
+ts_ELEMENTARI :: TestSuite
+ts_ELEMENTARI = def {
+  _dataOpts = Gen 0 1000 20000,
+  _progs = ["trialDiv", "turner", "eulerNaive"],
   _analOpts = def {
-    _graphFP   = Just "./Benchmarks/AutoBenched_FVSUE.png",
-    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_FVSUE.txt",                         
-    _coordsFP  = Just "./Benchmarks/AutoBenched_FVSUE.csv"
+    _graphFP   = Just "./Benchmarks/AutoBenched_ELEMENTARI.png",
+    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_ELEMENTARI.txt",                         
+    _coordsFP  = Just "./Benchmarks/AutoBenched_ELEMENTARI.csv"
   }
 }
 
-ts_EulerPriorityQueue :: TestSuite
-ts_EulerPriorityQueue = def {
-  _dataOpts = Gen 0 10000 200000,
-  _progs = ["eSPQ", "eSWPQ", "eSPQ4", "eSWPQ4"],
+ts_AVANZATI :: TestSuite
+ts_AVANZATI = def {
+  _dataOpts = Gen 0 70000 1400000,
+  _progs = ["birdEra", "birdSalvo", "eulerHamming"],
   _analOpts = def {
-    _graphFP   = Just "./Benchmarks/AutoBenched_EPQ.png",
-    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_EPQ.txt",                         
-    _coordsFP  = Just "./Benchmarks/AutoBenched_EPQ.csv"
+    _graphFP   = Just "./Benchmarks/AutoBenched_AVANZATI.png",
+    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_AVANZATI.txt",                         
+    _coordsFP  = Just "./Benchmarks/AutoBenched_AVANZATI.csv"
   }
 }
 
-ts_EulerSieves :: TestSuite
-ts_EulerSieves = def {
-  _dataOpts = Gen 0 10000 200000,
-  _progs = ["eSH", "eSW", "eSI", "eSH4", "eSW4", "eSI4"],
+ts_OTTIMIZZATI :: TestSuite
+ts_OTTIMIZZATI = def {
+  _dataOpts = Gen 0 70000 1400000,
+  _progs = ["oNeillPQ", "oNeillWPQ", "birdSalvoW4", "eulerHammingW4", "oNeillWPQ4", "oNeillPQ4"],
   _analOpts = def {
-    _graphFP   = Just "./Benchmarks/AutoBenched_ES.png",
-    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_ES.txt",                         
-    _coordsFP  = Just "./Benchmarks/AutoBenched_ES.csv"
+    _graphFP   = Just "./Benchmarks/AutoBenched_OTTIMIZZATI.png",
+    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_OTTIMIZZATI.txt",                         
+    _coordsFP  = Just "./Benchmarks/AutoBenched_OTTIMIZZATI.csv"
   }
 }
 
+ts_HARD :: TestSuite
+ts_HARD = def {
+  _dataOpts = Gen 0 228000 4560000,
+  _progs = ["oNeillPQ", "oNeillWPQ", "birdSalvoW4", "oNeillWPQ4", "oNeillPQ4", "birdEraW4"],
+  _analOpts = def {
+    _graphFP   = Just "./Benchmarks/AutoBenched_HARD.png",
+    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_HARD.txt",                         
+    _coordsFP  = Just "./Benchmarks/AutoBenched_HARD.csv"
+  }
+}
 
-
+ts_HARD_2 :: TestSuite
+ts_HARD_2 = def {
+  _dataOpts = Gen 0 500000 10000000,
+  _progs = ["oNeillWPQ", "birdSalvoW4", "oNeillWPQ4", "oNeillPQ4", "birdEraW4"],
+  _analOpts = def {
+    _graphFP   = Just "./Benchmarks/AutoBenched_HARD_2.png",
+    _reportFP  = Just "./Benchmarks/AutoBenchPerformance_HARD_2.txt",                         
+    _coordsFP  = Just "./Benchmarks/AutoBenched_HARD_2.csv"
+  }
+}
